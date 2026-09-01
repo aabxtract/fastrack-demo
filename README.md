@@ -15,7 +15,7 @@ FASTRACK is a Node.js CLI tool + MCP server. Describe what you want in plain Eng
 ## Install
 
 ```bash
-npm install -g fastrack
+npm install -g fastrack-cli
 ```
 
 For development: clone this repo and run `npm link`.

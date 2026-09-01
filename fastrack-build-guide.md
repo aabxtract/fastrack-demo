@@ -497,7 +497,7 @@ Continue building FASTRACK. Write two final files:
 1. README.md
 Complete documentation:
 - What FASTRACK is (one paragraph)
-- Install: npm install -g fastrack (for development: clone the repo and run `npm link`)
+- Install: npm install -g fastrack-cli (for development: clone the repo and run `npm link`)
 - Quick start: fastrack init
 - All commands with examples
 - MCP setup instructions for Claude Code and Cursor

@@ -1,5 +1,5 @@
 {
-  "name": "fastrack",
+  "name": "fastrack-cli",
   "version": "0.1.0",
   "description": "Plain English CLI + MCP server that builds, runs, fixes, and improves workflows. Model agnostic. Local SQLite memory.",
   "type": "module",
@@ -7,6 +7,23 @@
   "bin": {
     "fastrack": "./bin/fastrack.js"
   },
+  "files": [
+    "bin/",
+    "core/",
+    "connectors/",
+    "mcp/",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aabxtract/fastrack.git"
+  },
+  "homepage": "https://github.com/aabxtract/fastrack#readme",
+  "bugs": {
+    "url": "https://github.com/aabxtract/fastrack/issues"
+  },
+  "author": "aabxtract",
   "engines": {
     "node": ">=22"
   },

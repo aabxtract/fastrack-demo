@@ -7,7 +7,7 @@ Run everything in a clean terminal. Required before recording: a Groq key in `.e
 ## 1. Fresh install + zero-config onboarding (10s)
 
 ```bash
-npm link                      # (or npm install -g fastrack)
+npm link                      # (or npm install -g fastrack-cli)
 $env:GROQ_API_KEY="gsk_..."   # the ONLY setup step — no init needed
 fastrack "what is 12 times 8?"       # direct answer — no workflow even built
 ```
