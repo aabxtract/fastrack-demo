@@ -39,6 +39,11 @@ const program = new Command();
 
 const CONNECTORS = {
   github: {
+    guide: () => {
+      console.log(chalk.gray('\nGitHub setup:'));
+      console.log(chalk.gray('  1. github.com -> Settings -> Developer settings -> Personal access tokens -> Fine-grained'));
+      console.log(chalk.gray('  2. Select your repo; permissions: Contents (read), Pull requests (read), Issues (read/write)\n'));
+    },
     connect: (answers) => github.connect(answers.token, answers.owner, answers.repo),
     prompts: [
       { type: 'password', name: 'token', message: 'GitHub token:', mask: '*' },
@@ -47,39 +52,69 @@ const CONNECTORS = {
     ]
   },
   notion: {
+    guide: () => {
+      console.log(chalk.gray('\nNotion setup:'));
+      console.log(chalk.gray('  1. notion.so/my-integrations -> New integration -> copy the secret (ntn_...)'));
+      console.log(chalk.gray('  2. IMPORTANT: open your database -> ... menu -> Connections -> add your integration'));
+      console.log(chalk.gray('  3. Database ID: the 32-char hex in the database URL before ?v=\n'));
+    },
     connect: (answers) => notion.connect(answers.token, answers.databaseId),
     prompts: [
-      { type: 'password', name: 'token', message: 'Notion token:', mask: '*' },
-      { type: 'input', name: 'databaseId', message: 'Notion database ID:' }
+      { type: 'password', name: 'token', message: 'Notion internal integration secret (ntn_...):', mask: '*' },
+      { type: 'input', name: 'databaseId', message: 'Database ID:' }
     ]
   },
   slack: {
+    guide: () => {
+      console.log(chalk.gray('\nSlack setup:'));
+      console.log(chalk.gray('  1. https://api.slack.com/apps -> Create New App -> From scratch'));
+      console.log(chalk.gray('  2. OAuth & Permissions -> Bot Token Scopes: chat:write, channels:read, channels:history'));
+      console.log(chalk.gray('  3. Install to Workspace -> copy the Bot User OAuth Token (xoxb-...)\n'));
+    },
     connect: (answers) => slack.connect(answers.token, answers.defaultChannel ?? null),
     prompts: [
-      { type: 'password', name: 'token', message: 'Slack token:', mask: '*' },
-      { type: 'input', name: 'defaultChannel', message: 'Default channel (optional):' }
+      { type: 'password', name: 'token', message: 'Slack bot token (xoxb-...):', mask: '*' },
+      { type: 'input', name: 'defaultChannel', message: 'Default channel ID or name (optional):' }
     ]
   },
   discord: {
+    guide: () => {
+      console.log(chalk.gray('\nDiscord setup:'));
+      console.log(chalk.gray('  Server Settings -> Integrations -> Webhooks -> New Webhook -> copy URL\n'));
+    },
     connect: (answers) => discord.connect(answers.webhookUrl),
     prompts: [
-      { type: 'password', name: 'webhookUrl', message: 'Discord webhook URL (Server Settings -> Integrations -> Webhooks):' }
+      { type: 'password', name: 'webhookUrl', message: 'Discord webhook URL:', mask: '*' }
     ]
   },
   telegram: {
+    guide: () => {
+      console.log(chalk.gray('\nTelegram setup:'));
+      console.log(chalk.gray('  1. Message @BotFather -> /newbot -> copy the bot token'));
+      console.log(chalk.gray('  2. Message your bot once, then get your chat id from https://api.telegram.org/bot<token>/getUpdates\n'));
+    },
     connect: (answers) => telegram.connect(answers.botToken, answers.chatId),
     prompts: [
-      { type: 'password', name: 'botToken', message: 'Telegram bot token (from @BotFather):', mask: '*' },
+      { type: 'password', name: 'botToken', message: 'Telegram bot token:', mask: '*' },
       { type: 'input', name: 'chatId', message: 'Chat ID to send to:' }
     ]
   },
   linear: {
+    guide: () => {
+      console.log(chalk.gray('\nLinear setup:'));
+      console.log(chalk.gray('  Linear -> Settings -> API -> Personal API keys -> create, copy token\n'));
+    },
     connect: (answers) => linear.connect(answers.token),
     prompts: [
-      { type: 'password', name: 'token', message: 'Linear API token (Settings -> API):', mask: '*' }
+      { type: 'password', name: 'token', message: 'Linear API token:', mask: '*' }
     ]
   },
   airtable: {
+    guide: () => {
+      console.log(chalk.gray('\nAirtable setup:'));
+      console.log(chalk.gray('  1. https://airtable.com/create/tokens -> add scopes: data.records:read, data.records:write'));
+      console.log(chalk.gray('  2. Base ID: open the base -> the app... string in the API docs URL (airtable.com/appXXXX/...)\n'));
+    },
     connect: (answers) => airtable.connect(answers.token, answers.baseId, answers.tableName),
     prompts: [
       { type: 'password', name: 'token', message: 'Airtable personal access token:', mask: '*' },
@@ -88,11 +123,16 @@ const CONNECTORS = {
     ]
   },
   jira: {
+    guide: () => {
+      console.log(chalk.gray('\nJira setup:'));
+      console.log(chalk.gray('  1. Token: id.atlassian.com -> Security -> API tokens -> Create'));
+      console.log(chalk.gray('  2. Site URL is https://yourcompany.atlassian.net\n'));
+    },
     connect: (answers) => jira.connect(answers.siteUrl, answers.email, answers.apiToken),
     prompts: [
       { type: 'input', name: 'siteUrl', message: 'Jira site URL (https://yourcompany.atlassian.net):' },
       { type: 'input', name: 'email', message: 'Atlassian account email:' },
-      { type: 'password', name: 'apiToken', message: 'API token (id.atlassian.com -> Security -> API tokens):', mask: '*' }
+      { type: 'password', name: 'apiToken', message: 'API token:', mask: '*' }
     ]
   },
   webhook: {
@@ -104,10 +144,21 @@ const CONNECTORS = {
     ]
   },
   email: {
+    guide: () => {
+      console.log(chalk.gray('\nEmail sending is powered by Resend (free tier):'));
+      console.log(chalk.gray('  1. Sign up at https://resend.com -> API Keys -> Create API Key'));
+      console.log(chalk.gray('  2. Free tier sender is onboarding@resend.dev (emails only to YOUR own inbox)'));
+      console.log(chalk.gray('  3. To email other people, verify a domain at resend.com/domains\n'));
+    },
     connect: (answers) => emailTool.connect(answers.apiKey, answers.fromEmail, answers.defaultTo ?? null),
     prompts: [
-      { type: 'password', name: 'apiKey', message: 'Resend API key (resend.com -> API Keys):', mask: '*' },
-      { type: 'input', name: 'fromEmail', message: 'From address (free tier: onboarding@resend.dev):' },
+      { type: 'password', name: 'apiKey', message: 'Resend API key (re_...):', mask: '*' },
+      {
+        type: 'input',
+        name: 'fromEmail',
+        message: 'From address:',
+        default: 'onboarding@resend.dev'
+      },
       { type: 'input', name: 'defaultTo', message: 'Default recipient (your email):' }
     ]
   }
@@ -163,6 +214,7 @@ async function connectTool(tool) {
   if (!spec) {
     throw new Error(`Unknown tool "${tool}". Available: ${Object.keys(CONNECTORS).join(', ')}`);
   }
+  if (spec.guide) spec.guide();
   const answers = await inquirer.prompt(spec.prompts);
   const result = await spec.connect(answers);
   console.log(chalk.green(`Connected ${tool}`));
