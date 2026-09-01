@@ -22,6 +22,52 @@ import * as webhook from '../connectors/webhook.js';
 
 const MAX_FIX_ATTEMPTS = 3;
 
+// Synonym aliases for action names LLMs commonly invent (normalized form -> canonical)
+const ACTION_ALIASES = {
+  listpullrequests: 'list_open_prs',
+  listprs: 'list_open_prs',
+  getpullrequests: 'list_open_prs',
+  getopenprs: 'list_open_prs',
+  fetchpullrequests: 'list_open_prs',
+  getissues: 'list_issues',
+  fetchissues: 'list_issues',
+  listopenissues: 'list_issues',
+  listcommits: 'get_recent_commits',
+  getcommits: 'get_recent_commits',
+  listrecentcommits: 'get_recent_commits',
+  createcomment: 'create_comment',
+  addcomment: 'add_comment',
+  createnewpage: 'create_page',
+  addpage: 'create_page',
+  generate: 'generate_text',
+  generatetext: 'generate_text',
+  generateresponse: 'generate_text',
+  summarize: 'generate_text',
+  draft: 'generate_text',
+  searchissues: 'search',
+  sendnotification: 'send_message',
+  sendmessage: 'send_message'
+};
+
+function normalizeAction(name) {
+  return String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function resolveStepHandler(tool, action) {
+  const handlers = STEP_HANDLERS[tool];
+  if (!handlers) return null;
+  if (handlers[action]) return action;
+
+  const normalized = normalizeAction(action);
+  const alias = ACTION_ALIASES[normalized];
+  if (alias && handlers[alias]) return alias;
+
+  for (const name of Object.keys(handlers)) {
+    if (normalizeAction(name) === normalized) return name;
+  }
+  return null;
+}
+
 const STEP_HANDLERS = {
   github: {
     list_open_prs: (p) => github.listOpenPRs(),
@@ -131,14 +177,16 @@ export function buildWorkflow(intent) {
 }
 
 async function executeStep(step, context) {
-  const handler = STEP_HANDLERS[step.tool]?.[step.action];
-  if (!handler) {
+  const canonical = resolveStepHandler(step.tool, step.action);
+  if (!canonical) {
     throw new Error(
       `Unknown step "${step.tool}.${step.action}". Available: ${Object.entries(STEP_HANDLERS)
         .map(([tool, actions]) => `${tool}: ${Object.keys(actions).join(', ')}`)
         .join(' | ')}`
     );
   }
+  step.action = canonical; // persist the canonical name for retries and future runs
+  const handler = STEP_HANDLERS[step.tool][canonical];
   const params = substituteTemplates(step.params ?? {}, context);
   return handler(params);
 }
@@ -158,6 +206,7 @@ ${error.message}
 Respond with ONLY valid JSON, no markdown fences:
 {
   "explanation": "one sentence on what went wrong",
+  "action": "corrected action name, only if the action itself is invalid — otherwise omit",
   "params": { corrected parameter object for this step, same parameter names }
 }`;
 
@@ -211,6 +260,7 @@ export async function runWorkflow(workflowId, input = '', options = {}) {
 
         try {
           const fix = await fixStepParams(step, err, context);
+          if (fix.action) step.action = fix.action;
           step.params = { ...step.params, ...fix.params };
           if (options.verbose) {
             console.log(`  fix attempt ${attempt}: ${fix.explanation ?? 'adjusted params'}`);

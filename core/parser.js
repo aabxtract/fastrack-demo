@@ -23,6 +23,18 @@ Use EXACTLY this schema:
   "description": "human readable summary of what this workflow does"
 }
 
+Valid step actions (use ONLY these exact names):
+- github: list_open_prs, list_issues, assign_issue, create_comment, get_recent_commits
+- notion: create_page, update_page, query_database, append_block
+- slack: send_message, list_channels, get_recent_messages
+- discord: send_message
+- telegram: send_message
+- linear: create_issue, list_issues, list_teams, update_issue_state, add_comment
+- airtable: create_record, list_records, update_record
+- jira: create_issue, get_issue, search, add_comment, transition_issue
+- webhook: send
+- model: generate_text
+
 Rules:
 - For plain questions, calculations, or one-shot text generation with NO tool involved, use action "query" with empty steps and tools_needed []. FASTRACK will answer directly.
 - Only use action "create_workflow" when there are actual steps to run (tools or model generation steps).
