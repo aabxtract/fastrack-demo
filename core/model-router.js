@@ -200,6 +200,40 @@ function apiErrorMessage(err, fallback) {
   return status ? `${fallback} (HTTP ${status}): ${detail}` : `${fallback}: ${detail}`;
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function extractRetrySeconds(err) {
+  const msg = err?.response?.data?.error?.message ?? err?.response?.data?.message ?? '';
+  const match = msg.match(/try again in ([\d.]+)s/i);
+  return match ? Math.ceil(parseFloat(match[1])) : null;
+}
+
+// Rate-limit aware POST: honors the provider's retry hint, backs off, retries.
+// Also retries transient network errors (TLS hiccups, resets, timeouts).
+const TRANSIENT_CODES = ['ECONNRESET', 'EPROTO', 'ETIMEDOUT', 'EAI_AGAIN', 'ECONNABORTED', 'EPIPE'];
+
+async function postWithRetry(url, body, config, maxRetries = 2) {
+  let attempt = 0;
+  for (;;) {
+    try {
+      return await axios.post(url, body, config);
+    } catch (err) {
+      const isRateLimit = err?.response?.status === 429;
+      const isTransient = !err?.response && TRANSIENT_CODES.includes(err?.code);
+      if (attempt < maxRetries && (isRateLimit || isTransient)) {
+        attempt += 1;
+        const wait = isRateLimit
+          ? Math.min((extractRetrySeconds(err) ?? 5 * attempt) + 1, 60)
+          : 3 * attempt;
+        console.log(`[fastrack] ${isRateLimit ? 'rate limited' : `network hiccup (${err.code})`} — retrying in ${wait}s (attempt ${attempt}/${maxRetries})`);
+        await sleep(wait * 1000);
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 async function callOpenAICompatible(model, prompt, options) {
   const baseUrl = model.baseUrl
     ? model.baseUrl.replace(/\/+$/, '')
@@ -207,7 +241,7 @@ async function callOpenAICompatible(model, prompt, options) {
 
   let response;
   try {
-    response = await axios.post(
+    response = await postWithRetry(
       `${baseUrl}/chat/completions`,
       {
         model: model.model,
@@ -237,7 +271,7 @@ async function callOpenAICompatible(model, prompt, options) {
 async function callAnthropic(model, prompt, options) {
   let response;
   try {
-    response = await axios.post(
+    response = await postWithRetry(
       'https://api.anthropic.com/v1/messages',
       {
         model: model.model,
@@ -268,7 +302,7 @@ async function callAnthropic(model, prompt, options) {
 async function callGoogle(model, prompt, options) {
   let response;
   try {
-    response = await axios.post(
+    response = await postWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/${model.model}:generateContent`,
       {
         ...(options.system

@@ -443,7 +443,10 @@ program
           }
           if (context.length > 0) {
             console.log(chalk.bold.underline('Context'));
-            console.table(context.map((c) => ({ Key: c.key, Value: JSON.stringify(c.value), Updated: c.updated_at })));
+            console.table(context.map((c) => {
+              const value = JSON.stringify(c.value);
+              return { Key: c.key, Value: value.length > 90 ? value.slice(0, 90) + '…' : value, Updated: c.updated_at };
+            }));
           }
           if (workflows.length > 0) {
             console.log(chalk.bold.underline('Workflows'));
