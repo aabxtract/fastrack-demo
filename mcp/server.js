@@ -160,7 +160,7 @@ export function createServer() {
         tool: z.enum(['github', 'notion', 'slack', 'discord', 'telegram', 'linear', 'airtable', 'jira', 'webhook', 'email']),
         credentials: z
           .record(z.string(), z.string())
-          .describe('github: {token, owner, repo} | notion: {token, databaseId} | slack: {token, defaultChannel?} | discord: {webhookUrl} | telegram: {botToken, chatId} | linear: {token} | airtable: {token, baseId, tableName} | jira: {siteUrl, email, apiToken} | email: {apiKey, fromEmail, defaultTo?}')
+          .describe('github: {token, owner, repo} | notion: {token, databaseId} | slack: {token, defaultChannel?} | discord: {webhookUrl} | telegram: {botToken, chatId? — auto-detected if omitted} | linear: {token} | airtable: {token, baseId, tableName} | jira: {siteUrl, email, apiToken} | email: {apiKey, fromEmail, defaultTo?}')
       }
     },
     async ({ tool, credentials }) =>
@@ -174,8 +174,16 @@ export function createServer() {
             return jsonResult(await slack.connect(credentials.token, credentials.defaultChannel ?? null));
           case 'discord':
             return jsonResult(await discord.connect(credentials.webhookUrl));
-          case 'telegram':
+          case 'telegram': {
+            if (!credentials.chatId) {
+              const found = await telegram.resolveChatId(credentials.botToken, { attempts: 3, delayMs: 1500 });
+              if (!found) {
+                throw new Error('No telegram chat detected. Send your bot any message in Telegram, then retry fastrack_connect with the chatId.');
+              }
+              return jsonResult(await telegram.connect(credentials.botToken, found.chatId));
+            }
             return jsonResult(await telegram.connect(credentials.botToken, credentials.chatId));
+          }
           case 'linear':
             return jsonResult(await linear.connect(credentials.token));
           case 'airtable':

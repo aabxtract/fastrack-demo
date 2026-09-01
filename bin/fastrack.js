@@ -91,12 +91,31 @@ const CONNECTORS = {
     guide: () => {
       console.log(chalk.gray('\nTelegram setup:'));
       console.log(chalk.gray('  1. Message @BotFather -> /newbot -> copy the bot token'));
-      console.log(chalk.gray('  2. Message your bot once, then get your chat id from https://api.telegram.org/bot<token>/getUpdates\n'));
+      console.log(chalk.gray("  2. That's it — FASTRACK detects your chat id automatically (it will ask you to send the bot a message)\n"));
     },
-    connect: (answers) => telegram.connect(answers.botToken, answers.chatId),
+    connect: async (answers) => {
+      const me = await telegram.getMe(answers.botToken);
+      console.log(chalk.gray(`  bot: @${me.username}`));
+      let chatId = (answers.chatId || '').trim();
+      if (!chatId) {
+        const spinner = ora(`Waiting for a message to @${me.username} — open Telegram and send it anything...`).start();
+        const found = await telegram.resolveChatId(answers.botToken);
+        if (!found) {
+          spinner.stop();
+          throw new Error(`No message found. Send ANY message to @${me.username} in Telegram, then run: fastrack connect telegram`);
+        }
+        spinner.succeed(`Detected chat: ${found.name} (${found.chatId})`);
+        chatId = found.chatId;
+      }
+      const result = await telegram.connect(answers.botToken, chatId);
+      try {
+        await telegram.sendMessage('FASTRACK is connected to this chat. Plain English in, workflows out.');
+      } catch { /* confirmation is best-effort */ }
+      return result;
+    },
     prompts: [
       { type: 'password', name: 'botToken', message: 'Telegram bot token:', mask: '*' },
-      { type: 'input', name: 'chatId', message: 'Chat ID to send to:' }
+      { type: 'input', name: 'chatId', message: 'Chat ID (press Enter to auto-detect):' }
     ]
   },
   linear: {
