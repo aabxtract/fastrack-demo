@@ -33,6 +33,7 @@ import * as linear from '../connectors/linear.js';
 import * as airtable from '../connectors/airtable.js';
 import * as jira from '../connectors/jira.js';
 import * as webhookTool from '../connectors/webhook.js';
+import * as emailTool from '../connectors/email.js';
 
 const program = new Command();
 
@@ -100,6 +101,14 @@ const CONNECTORS = {
       { type: 'input', name: 'name', message: 'Webhook name (e.g. "deploy", "alerts"):' },
       { type: 'password', name: 'url', message: 'Webhook URL:', mask: '*' },
       { type: 'input', name: 'headersJson', message: 'Extra headers as JSON (optional, e.g. {"Authorization":"Bearer x"}):' }
+    ]
+  },
+  email: {
+    connect: (answers) => emailTool.connect(answers.apiKey, answers.fromEmail, answers.defaultTo ?? null),
+    prompts: [
+      { type: 'password', name: 'apiKey', message: 'Resend API key (resend.com -> API Keys):', mask: '*' },
+      { type: 'input', name: 'fromEmail', message: 'From address (free tier: onboarding@resend.dev):' },
+      { type: 'input', name: 'defaultTo', message: 'Default recipient (your email):' }
     ]
   }
 };
@@ -493,8 +502,9 @@ program
 program
   .command('report')
   .description('Generate (and optionally send) a status report from your connected tools')
-  .option('--send <channels>', 'Comma-separated channels: slack,discord,telegram,notion,webhook')
+  .option('--send <channels>', 'Comma-separated channels: slack,discord,telegram,notion,webhook,email')
   .option('--scope <text>', 'Focus the report on a specific area')
+  .option('--to <email>', 'Recipient for the email channel')
   .action(async (options) => {
     const spinner = ora('Pulling activity from your tools...').start();
     try {
@@ -505,7 +515,7 @@ program
       if (options.send) {
         const channels = options.send.split(',').map((c) => c.trim()).filter(Boolean);
         const sending = ora(`Sending to: ${channels.join(', ')}...`).start();
-        const results = await sendReport(report, channels);
+        const results = await sendReport(report, channels, options.to ? { emailTo: options.to } : {});
         sending.succeed('Delivery results:');
         for (const r of results) {
           if (r.ok) console.log(chalk.green(`  ${r.channel}: sent`));

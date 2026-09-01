@@ -1,6 +1,6 @@
 import { callModel, loadConfig } from './model-router.js';
 
-export const KNOWN_TOOLS = ['github', 'notion', 'slack', 'discord', 'telegram', 'linear', 'airtable', 'jira', 'webhook'];
+export const KNOWN_TOOLS = ['github', 'notion', 'slack', 'discord', 'telegram', 'linear', 'airtable', 'jira', 'webhook', 'email'];
 export const KNOWN_ACTIONS = ['create_workflow', 'run_workflow', 'query', 'connect_tool', 'assign_task'];
 
 const SYSTEM_PROMPT = `You are FASTRACK's intent parser. You convert a user's plain English request into a strict JSON object.
@@ -10,14 +10,14 @@ Respond with ONLY the JSON object. No markdown, no code fences, no explanation, 
 Use EXACTLY this schema:
 {
   "action": "create_workflow" | "run_workflow" | "query" | "connect_tool" | "assign_task",
-  "tools_needed": ["github" | "notion" | "slack" | "discord" | "telegram" | "linear" | "airtable" | "jira" | "webhook"],
+  "tools_needed": ["github" | "notion" | "slack" | "discord" | "telegram" | "linear" | "airtable" | "jira" | "webhook" | "email"],
   "trigger": {
     "type": "once" | "recurring" | "event",
     "schedule": string | null,
     "event": string | null
   },
   "steps": [
-    { "tool": "github" | "notion" | "slack" | "discord" | "telegram" | "linear" | "airtable" | "jira" | "webhook" | "model", "action": string, "params": object }
+    { "tool": "github" | "notion" | "slack" | "discord" | "telegram" | "linear" | "airtable" | "jira" | "webhook" | "email" | "model", "action": string, "params": object }
   ],
   "assignee": null | "name or role",
   "description": "human readable summary of what this workflow does"
@@ -33,12 +33,13 @@ Valid step actions (use ONLY these exact names):
 - airtable: create_record, list_records, update_record
 - jira: create_issue, get_issue, search, add_comment, transition_issue
 - webhook: send
+- email: send_email
 - model: generate_text
 
 Rules:
 - For plain questions, calculations, or one-shot text generation with NO tool involved, use action "query" with empty steps and tools_needed []. FASTRACK will answer directly.
 - Only use action "create_workflow" when there are actual steps to run (tools or model generation steps).
-- "tools_needed" must only contain: github, notion, slack, discord, telegram, linear, airtable, jira, webhook. Use [] if no tool is involved. Do NOT include "model" in tools_needed.
+- "tools_needed" must only contain: github, notion, slack, discord, telegram, linear, airtable, jira, webhook, email. Use [] if no tool is involved. Do NOT include "model" in tools_needed.
 - Every entry in "steps" must have tool, action and params.
 - When the request needs text generation between tool steps (summarizing, drafting, rewriting data), add a step with tool "model", action "generate_text", and params { "prompt": "instruction, may reference {{previous}}" }.
 - If the user mentions a schedule like "every morning at 9am", use trigger.type "recurring" and put the schedule phrase in trigger.schedule verbatim.

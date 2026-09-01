@@ -6,11 +6,18 @@ import { initDB, getAllContext, getWorkflows } from '../core/memory.js';
 import { compareModels } from '../core/model-router.js';
 import { generateReport, sendReport } from '../core/reports.js';
 import { digestNotes, planWorkflowsFromNotes } from '../core/notes.js';
+import * as email from '../connectors/email.js';
 import { runOnce, listWorkflows, resolveWorkflow, runWorkflow, shareWorkflow } from '../core/workflow-engine.js';
 import { startAll } from '../core/scheduler.js';
 import * as github from '../connectors/github.js';
 import * as notion from '../connectors/notion.js';
 import * as slack from '../connectors/slack.js';
+import * as discord from '../connectors/discord.js';
+import * as telegram from '../connectors/telegram.js';
+import * as linear from '../connectors/linear.js';
+import * as airtable from '../connectors/airtable.js';
+import * as jira from '../connectors/jira.js';
+import * as webhookTool from '../connectors/webhook.js';
 
 // Everything except MCP protocol frames must go to stderr — stray stdout output corrupts stdio transport.
 console.log = (...args) => console.error(...args);
@@ -148,29 +155,37 @@ export function createServer() {
     'fastrack_connect',
     {
       title: 'Connect tool',
-      description: 'Connect a new tool to FASTRACK (github, notion or slack)',
+      description: 'Connect a tool to FASTRACK (github, notion, slack, discord, telegram, linear, airtable, jira, webhook, email)',
       inputSchema: {
-        tool: z.enum(['github', 'notion', 'slack']),
+        tool: z.enum(['github', 'notion', 'slack', 'discord', 'telegram', 'linear', 'airtable', 'jira', 'webhook', 'email']),
         credentials: z
           .record(z.string(), z.string())
-          .describe('github: {token, owner, repo} | notion: {token, databaseId} | slack: {token, defaultChannel?}')
+          .describe('github: {token, owner, repo} | notion: {token, databaseId} | slack: {token, defaultChannel?} | discord: {webhookUrl} | telegram: {botToken, chatId} | linear: {token} | airtable: {token, baseId, tableName} | jira: {siteUrl, email, apiToken} | email: {apiKey, fromEmail, defaultTo?}')
       }
     },
     async ({ tool, credentials }) =>
       safeHandler('connect', async () => {
         switch (tool) {
-          case 'github': {
-            const result = await github.connect(credentials.token, credentials.owner, credentials.repo);
-            return jsonResult(result);
-          }
-          case 'notion': {
-            const result = await notion.connect(credentials.token, credentials.databaseId);
-            return jsonResult(result);
-          }
-          case 'slack': {
-            const result = await slack.connect(credentials.token, credentials.defaultChannel ?? null);
-            return jsonResult(result);
-          }
+          case 'github':
+            return jsonResult(await github.connect(credentials.token, credentials.owner, credentials.repo));
+          case 'notion':
+            return jsonResult(await notion.connect(credentials.token, credentials.databaseId));
+          case 'slack':
+            return jsonResult(await slack.connect(credentials.token, credentials.defaultChannel ?? null));
+          case 'discord':
+            return jsonResult(await discord.connect(credentials.webhookUrl));
+          case 'telegram':
+            return jsonResult(await telegram.connect(credentials.botToken, credentials.chatId));
+          case 'linear':
+            return jsonResult(await linear.connect(credentials.token));
+          case 'airtable':
+            return jsonResult(await airtable.connect(credentials.token, credentials.baseId, credentials.tableName));
+          case 'jira':
+            return jsonResult(await jira.connect(credentials.siteUrl, credentials.email, credentials.apiToken));
+          case 'webhook':
+            return jsonResult(await webhookTool.connect(credentials.name, credentials.url));
+          case 'email':
+            return jsonResult(await email.connect(credentials.apiKey, credentials.fromEmail, credentials.defaultTo ?? null));
           default:
             throw new Error(`Unsupported tool: ${tool}`);
         }
@@ -185,7 +200,7 @@ export function createServer() {
       inputSchema: {
         scope: z.string().optional().describe('Optional focus area, e.g. "GTM progress"'),
         send_to: z
-          .array(z.enum(['slack', 'discord', 'telegram', 'notion', 'webhook']))
+          .array(z.enum(['slack', 'discord', 'telegram', 'notion', 'webhook', 'email']))
           .optional()
           .describe('Channels to deliver the report to')
       }

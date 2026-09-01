@@ -9,6 +9,7 @@ import * as slack from '../connectors/slack.js';
 import * as discord from '../connectors/discord.js';
 import * as telegram from '../connectors/telegram.js';
 import * as webhook from '../connectors/webhook.js';
+import * as email from '../connectors/email.js';
 
 // Each collector pulls from one connected tool; failures (not connected,
 // bad token, network) skip that source instead of failing the report.
@@ -110,8 +111,15 @@ export async function sendReport(report, channels = [], options = {}) {
         case 'webhook':
           result = await webhook.send(options.webhookName ?? 'default', { text: report, content: report });
           break;
+        case 'email':
+          result = await email.sendEmail(
+            options.emailTo ?? null,
+            `FASTRACK Status Report - ${new Date().toISOString().slice(0, 10)}`,
+            report
+          );
+          break;
         default:
-          throw new Error(`Unknown channel "${channel}". Available: slack, discord, telegram, notion, webhook`);
+          throw new Error(`Unknown channel "${channel}". Available: slack, discord, telegram, notion, webhook, email`);
       }
       results.push({ channel, ok: true, result });
     } catch (err) {

@@ -39,6 +39,7 @@ test('new connectors: guards, connect persistence, webhook + discord live', asyn
     const airtable = await import('../connectors/airtable.js');
     const jira = await import('../connectors/jira.js');
     const webhook = await import('../connectors/webhook.js');
+    const email = await import('../connectors/email.js');
 
     // credential guards
     await assert.rejects(() => discord.sendMessage('hi'), /discord not connected/);
@@ -47,6 +48,7 @@ test('new connectors: guards, connect persistence, webhook + discord live', asyn
     await assert.rejects(() => airtable.listRecords(), /airtable not connected/);
     await assert.rejects(() => jira.getIssue('ABC-1'), /jira not connected/);
     await assert.rejects(() => webhook.send('nope', {}), /not connected/);
+    await assert.rejects(() => email.sendEmail(null, 's', 'b'), /email not connected/);
 
     // connect persists
     await discord.connect(capture.url);
@@ -55,6 +57,7 @@ test('new connectors: guards, connect persistence, webhook + discord live', asyn
     await airtable.connect('air_test', 'app123', 'Tasks');
     await jira.connect('https://test.atlassian.net', 'a@b.c', 'tok');
     await webhook.connect('default', capture.url, { 'X-Test': 'yes' });
+    await email.connect('re_test', 'onboarding@resend.dev', 'me@test.dev', capture.url);
 
     assert.ok(connected().discord.webhookUrl.startsWith('http://127.0.0.1'));
     assert.equal(connected().telegram.chatId, '42');
@@ -62,21 +65,30 @@ test('new connectors: guards, connect persistence, webhook + discord live', asyn
     assert.equal(connected().airtable.tableName, 'Tasks');
     assert.equal(connected().jira.siteUrl, 'https://test.atlassian.net');
     assert.equal(connected().webhooks.default.headers['X-Test'], 'yes');
+    assert.equal(connected().email.defaultTo, 'me@test.dev');
+    assert.equal(connected().email.baseUrl, capture.url);
 
     // connect validation
     await assert.rejects(() => discord.connect('not-a-url'), /webhook URL/);
     await assert.rejects(() => webhook.connect('x', 'ftp://bad'), /http/);
     await assert.rejects(() => jira.connect('https://x.atlassian.net', 'e'), /requires/);
+    await assert.rejects(() => email.connect('k'), /requires/);
 
     // live: webhook send posts payload + custom headers
     const sent = await webhook.send('default', { hello: 'world' });
     assert.equal(sent.status, 200);
     await discord.sendMessage('hello discord');
+    const mail = await email.sendEmail(null, 'Test subject', 'Test body');
+    assert.equal(mail.to, 'me@test.dev');
 
     const webhookHit = capture.received.find((r) => r.body?.hello === 'world');
     const discordHit = capture.received.find((r) => r.body?.content === 'hello discord');
+    const emailHit = capture.received.find((r) => r.body?.subject === 'Test subject');
     assert.ok(webhookHit, 'webhook payload arrived');
     assert.ok(discordHit, 'discord payload arrived');
+    assert.equal(emailHit?.body?.from, 'onboarding@resend.dev');
+    assert.equal(emailHit?.body?.text, 'Test body');
+    assert.ok(emailHit, 'email payload arrived');
 
     // unknown named webhook gives a helpful error
     await assert.rejects(() => webhook.send('missing', {}), /not connected.*\(saved:/s);
@@ -94,6 +106,7 @@ test('reports: generate from collectors, save context, deliver via webhook/disco
     const reports = await import('../core/reports.js');
     const discord = await import('../connectors/discord.js');
     const webhook = await import('../connectors/webhook.js');
+    const email = await import('../connectors/email.js');
     const { getAllContext } = env.memory;
 
     // nothing connected -> explicit error
@@ -102,9 +115,10 @@ test('reports: generate from collectors, save context, deliver via webhook/disco
       /No connected tools to report from/
     );
 
-    // connect discord + webhook as delivery targets
+    // connect delivery targets to THIS test's capture server
     await discord.connect(capture.url);
     await webhook.connect('default', capture.url);
+    await email.connect('re_test', 'onboarding@resend.dev', 'me@test.dev', capture.url);
 
     // generate with an injected fake collector (no real network)
     const fakeCollectors = [
@@ -118,12 +132,13 @@ test('reports: generate from collectors, save context, deliver via webhook/disco
     assert.equal(reportsInContext.length, 1);
     assert.equal(reportsInContext[0].value.scope, 'core features');
 
-    // deliver to both offline-safe channels
-    const results = await reports.sendReport(report, ['webhook', 'discord']);
-    assert.equal(results.length, 2);
+    // deliver to offline-safe channels
+    const results = await reports.sendReport(report, ['webhook', 'discord', 'email']);
+    assert.equal(results.length, 3);
     assert.ok(results.every((r) => r.ok), JSON.stringify(results));
     assert.ok(capture.received.some((r) => r.body?.text?.includes('FAKE REPORT')));
     assert.ok(capture.received.some((r) => r.body?.content?.includes('FAKE REPORT')));
+    assert.ok(capture.received.some((r) => r.body?.text?.includes('FAKE REPORT') && r.body?.from));
 
     // unknown channel rejected
     const bad = await reports.sendReport(report, ['pigeon']);

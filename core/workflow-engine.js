@@ -19,6 +19,7 @@ import * as linear from '../connectors/linear.js';
 import * as airtable from '../connectors/airtable.js';
 import * as jira from '../connectors/jira.js';
 import * as webhook from '../connectors/webhook.js';
+import * as email from '../connectors/email.js';
 
 const MAX_FIX_ATTEMPTS = 3;
 
@@ -114,6 +115,9 @@ const STEP_HANDLERS = {
   },
   webhook: {
     send: (p) => webhook.send(p.target ?? p.name ?? p.url, p.payload ?? { text: p.message ?? p.text ?? '' })
+  },
+  email: {
+    send_email: (p) => email.sendEmail(p.to, p.subject, p.body, p.html ? { html: true } : {})
   },
   model: {
     generate_text: (p) =>
