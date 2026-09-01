@@ -7,7 +7,7 @@ export const FASTRACK_DIR = process.env.FASTRACK_HOME ?? path.join(os.homedir(),
 export const CONFIG_PATH = path.join(FASTRACK_DIR, 'fastrack.config.json');
 
 export const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
-const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
+const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
 
 const DEFAULT_CONFIG = {
   models: [],
@@ -190,53 +190,73 @@ export function autoSelectModel(prompt) {
   return { ...getActiveModel(), taskType, tokens };
 }
 
+function apiErrorMessage(err, fallback) {
+  const detail =
+    err?.response?.data?.error?.message ??
+    err?.response?.data?.message ??
+    err?.message ??
+    fallback;
+  const status = err?.response?.status;
+  return status ? `${fallback} (HTTP ${status}): ${detail}` : `${fallback}: ${detail}`;
+}
+
 async function callOpenAICompatible(model, prompt, options) {
   const baseUrl = model.baseUrl
     ? model.baseUrl.replace(/\/+$/, '')
     : 'https://api.openai.com/v1';
 
-  const response = await axios.post(
-    `${baseUrl}/chat/completions`,
-    {
-      model: model.model,
-      messages: [
-        ...(options.system ? [{ role: 'system', content: options.system }] : []),
-        { role: 'user', content: prompt }
-      ],
-      temperature: options.temperature ?? 0.4,
-      max_tokens: options.maxTokens ?? 4096
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${model.apiKey}`,
-        'Content-Type': 'application/json'
+  let response;
+  try {
+    response = await axios.post(
+      `${baseUrl}/chat/completions`,
+      {
+        model: model.model,
+        messages: [
+          ...(options.system ? [{ role: 'system', content: options.system }] : []),
+          { role: 'user', content: prompt }
+        ],
+        temperature: options.temperature ?? 0.4,
+        max_tokens: options.maxTokens ?? 4096
       },
-      timeout: options.timeout ?? 120000
-    }
-  );
+      {
+        headers: {
+          Authorization: `Bearer ${model.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: options.timeout ?? 120000
+      }
+    );
+  } catch (err) {
+    throw new Error(apiErrorMessage(err, `Model request failed (${model.provider}/${model.model})`));
+  }
 
   const choice = response.data?.choices?.[0];
   return choice?.message?.content ?? '';
 }
 
 async function callAnthropic(model, prompt, options) {
-  const response = await axios.post(
-    'https://api.anthropic.com/v1/messages',
-    {
-      model: model.model,
-      max_tokens: options.maxTokens ?? 4096,
-      ...(options.system ? { system: options.system } : {}),
-      messages: [{ role: 'user', content: prompt }]
-    },
-    {
-      headers: {
-        'x-api-key': model.apiKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json'
+  let response;
+  try {
+    response = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: model.model,
+        max_tokens: options.maxTokens ?? 4096,
+        ...(options.system ? { system: options.system } : {}),
+        messages: [{ role: 'user', content: prompt }]
       },
-      timeout: options.timeout ?? 120000
-    }
-  );
+      {
+        headers: {
+          'x-api-key': model.apiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json'
+        },
+        timeout: options.timeout ?? 120000
+      }
+    );
+  } catch (err) {
+    throw new Error(apiErrorMessage(err, `Model request failed (${model.provider}/${model.model})`));
+  }
 
   const text = response.data?.content
     ?.filter((block) => block.type === 'text')
@@ -246,26 +266,31 @@ async function callAnthropic(model, prompt, options) {
 }
 
 async function callGoogle(model, prompt, options) {
-  const response = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model.model}:generateContent`,
-    {
-      ...(options.system
-        ? { system_instruction: { parts: [{ text: options.system }] } }
-        : {}),
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: options.temperature ?? 0.4,
-        maxOutputTokens: options.maxTokens ?? 4096
-      }
-    },
-    {
-      headers: {
-        'x-goog-api-key': model.apiKey,
-        'Content-Type': 'application/json'
+  let response;
+  try {
+    response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model.model}:generateContent`,
+      {
+        ...(options.system
+          ? { system_instruction: { parts: [{ text: options.system }] } }
+          : {}),
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: options.temperature ?? 0.4,
+          maxOutputTokens: options.maxTokens ?? 4096
+        }
       },
-      timeout: options.timeout ?? 120000
-    }
-  );
+      {
+        headers: {
+          'x-goog-api-key': model.apiKey,
+          'Content-Type': 'application/json'
+        },
+        timeout: options.timeout ?? 120000
+      }
+    );
+  } catch (err) {
+    throw new Error(apiErrorMessage(err, `Model request failed (${model.provider}/${model.model})`));
+  }
 
   const text = response.data?.candidates?.[0]?.content?.parts
     ?.map((part) => part.text)

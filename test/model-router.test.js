@@ -14,7 +14,7 @@ test('model-router: groq provider + GROQ_API_KEY onboarding', async () => {
     assert.match(text, /FAKE OUTPUT: groq ping/);
 
     // groq without baseUrl gets the real Groq endpoint as default
-    const defaulted = env.modelRouter.addModel('groq', 'gsk_test', 'llama-3.3-70b-versatile');
+    const defaulted = env.modelRouter.addModel('groq', 'gsk_test', 'openai/gpt-oss-120b');
     assert.equal(defaulted.baseUrl, 'https://api.groq.com/openai/v1');
 
     // env fallback: no configured models + GROQ_API_KEY -> instant groq model
@@ -25,7 +25,7 @@ test('model-router: groq provider + GROQ_API_KEY onboarding', async () => {
     process.env.GROQ_API_KEY = 'gsk_env_test';
     const active = env.modelRouter.getActiveModel();
     assert.equal(active.provider, 'groq');
-    assert.equal(active.model, 'llama-3.3-70b-versatile');
+    assert.equal(active.model, 'openai/gpt-oss-120b');
     assert.equal(active.baseUrl, 'https://api.groq.com/openai/v1');
 
     // FASTRACK_MODEL overrides the env model name
@@ -87,7 +87,7 @@ test('model-router: config, validation, selection, live calls', async () => {
     // error surfaces from provider
     await assert.rejects(
       () => modelRouter.callModel('FORCE_FAIL now'),
-      /Request failed with status code 500/
+      /HTTP 500.*forced failure/
     );
 
     // compare across all configured models

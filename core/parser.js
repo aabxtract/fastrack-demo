@@ -24,6 +24,8 @@ Use EXACTLY this schema:
 }
 
 Rules:
+- For plain questions, calculations, or one-shot text generation with NO tool involved, use action "query" with empty steps and tools_needed []. FASTRACK will answer directly.
+- Only use action "create_workflow" when there are actual steps to run (tools or model generation steps).
 - "tools_needed" must only contain: github, notion, slack, discord, telegram, linear, airtable, jira, webhook. Use [] if no tool is involved. Do NOT include "model" in tools_needed.
 - Every entry in "steps" must have tool, action and params.
 - When the request needs text generation between tool steps (summarizing, drafting, rewriting data), add a step with tool "model", action "generate_text", and params { "prompt": "instruction, may reference {{previous}}" }.

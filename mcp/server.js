@@ -49,12 +49,10 @@ export function createServer() {
     async ({ command }) =>
       safeHandler('run', async () => {
         const result = await runOnce(command, { interactive: false });
-        return textResult(
-          [
-            `Workflow #${result.workflow.id}: ${result.workflow.name}`,
-            result.output || '(no output)'
-          ].join('\n\n')
-        );
+        const header = result.workflow
+          ? `Workflow #${result.workflow.id}: ${result.workflow.name}`
+          : 'Answer';
+        return textResult([header, result.output || '(no output)'].join('\n\n'));
       })
   );
 

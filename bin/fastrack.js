@@ -122,7 +122,7 @@ const PROVIDER_CHOICES = [
 ];
 
 const MODEL_SUGGESTIONS = {
-  groq: 'llama-3.3-70b-versatile',
+  groq: 'openai/gpt-oss-120b',
   openai: 'gpt-4o-mini',
   anthropic: 'claude-sonnet-4-6',
   google: 'gemini-2.5-flash',
@@ -161,6 +161,9 @@ async function connectTool(tool) {
 }
 
 function resultToText(result) {
+  if (result.direct_answer) {
+    return result.output || '(no output)';
+  }
   const lines = [];
   lines.push(chalk.bold(`Workflow #${result.workflow.id}: ${result.workflow.name}`));
   for (const step of result.results) {
@@ -684,7 +687,7 @@ program
       banner();
       const spinner = ora('Thinking...').start();
       const result = await runOnce(text, { interactive: true });
-      spinner.succeed(`Done (${result.workflow.trigger_type})`);
+      spinner.succeed(result.workflow ? `Done (${result.workflow.trigger_type})` : 'Done');
       console.log('\n' + resultToText(result));
       if (result.suggestion) {
         console.log(

@@ -34,7 +34,16 @@ export function createFakeModelServer() {
 
     let content;
     if (system.includes('intent parser')) {
-      if (user.includes('echo')) {
+      if (user.includes('direct question')) {
+        content = JSON.stringify({
+          action: 'query',
+          tools_needed: [],
+          trigger: { type: 'once', schedule: null, event: null },
+          steps: [],
+          assignee: null,
+          description: 'Answer the question directly'
+        });
+      } else if (user.includes('echo')) {
         content = JSON.stringify({
           action: 'create_workflow',
           tools_needed: [],

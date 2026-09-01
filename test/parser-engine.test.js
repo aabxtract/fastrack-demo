@@ -115,6 +115,12 @@ test('workflow engine: build, run, templates, failure, self-heal path', async ()
     assert.match(e2e.output, /FAKE OUTPUT: Echo: echo inline e2e/);
     assert.ok(e2e.workflow.id);
 
+    // direct answer path: query action with no steps -> no workflow created
+    const direct = await engine.runOnce('direct question: what is 2 plus 2?');
+    assert.equal(direct.direct_answer, true);
+    assert.equal(direct.workflow, null);
+    assert.match(direct.output, /FAKE OUTPUT: direct question/);
+
     // listWorkflows
     assert.ok(engine.listWorkflows().length >= 3);
   } finally {

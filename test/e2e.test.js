@@ -151,7 +151,8 @@ test('CLI: missing model gives explicit error, not a crash', async () => {
 
     const { code, stdoutLines } = await runChild(
       [path.join(ROOT, 'bin', 'fastrack.js'), 'echo anything'],
-      { FASTRACK_HOME: env.homeDir }
+      // GROQ_API_KEY: '' neutralizes both the inherited env var and the project .env (dotenv never overrides)
+      { FASTRACK_HOME: env.homeDir, GROQ_API_KEY: '' }
     );
 
     const stdout = stdoutLines.join('\n');

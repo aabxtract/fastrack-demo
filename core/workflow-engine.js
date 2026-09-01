@@ -398,6 +398,15 @@ export async function runOnce(input, options = {}) {
     );
   }
 
+  // Direct answer: plain questions and one-shot requests need no workflow
+  if (intent.action === 'query' && intent.steps.length === 0) {
+    const answer = await callModel(input, {
+      system: 'You are FASTRACK. Answer directly. Be concise, factual and useful.',
+      temperature: 0.4
+    });
+    return { intent, workflow: null, results: [], output: answer, direct_answer: true };
+  }
+
   const workflow = buildWorkflow(intent);
   const result = await runWorkflow(workflow.id, input, {
     interactive: options.interactive ?? false,
