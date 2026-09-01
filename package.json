@@ -1,6 +1,6 @@
 {
   "name": "fastrack-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Plain English CLI + MCP server that builds, runs, fixes, and improves workflows. Model agnostic. Local SQLite memory.",
   "type": "module",
   "main": "bin/fastrack.js",
