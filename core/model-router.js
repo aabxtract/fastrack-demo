@@ -40,7 +40,10 @@ export function loadConfig() {
 
 export function saveConfig(config) {
   fs.mkdirSync(FASTRACK_DIR, { recursive: true });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  // Atomic write: a crash mid-write must never corrupt the config (NUL-byte file)
+  const tmpPath = `${CONFIG_PATH}.tmp`;
+  fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), 'utf8');
+  fs.renameSync(tmpPath, CONFIG_PATH);
   return config;
 }
 
