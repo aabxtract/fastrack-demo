@@ -1,0 +1,30 @@
+{
+  "name": "fastrack",
+  "version": "0.1.0",
+  "description": "Plain English CLI + MCP server that builds, runs, fixes, and improves workflows. Model agnostic. Local SQLite memory.",
+  "type": "module",
+  "main": "bin/fastrack.js",
+  "bin": {
+    "fastrack": "./bin/fastrack.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node bin/fastrack.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "axios": "^1.20.0",
+    "better-sqlite3": "^13.0.3",
+    "chalk": "^6.0.0",
+    "commander": "^15.0.0",
+    "dotenv": "^17.2.0",
+    "inquirer": "^14.2.0",
+    "node-cron": "^4.6.0",
+    "ora": "^9.4.1",
+    "zod": "^4.5.4"
+  },
+  "license": "MIT"
+}
