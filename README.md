@@ -6,7 +6,7 @@ FASTRACK is a Node.js CLI tool + MCP server. Describe what you want in plain Eng
 
 - **Model agnostic** — Groq, OpenAI, Anthropic, Google, or any OpenAI-compatible endpoint
 - **Local memory** — everything lives in SQLite at `~/.fastrack/fastrack.db`. Nothing leaves your machine except the API calls you ask for
-- **Tool connectors** — GitHub, Notion, Slack, Discord, Telegram, Linear, Airtable, Jira, generic Webhooks
+- **Tool connectors** — GitHub, Notion, Slack, Discord, Telegram, Linear, Airtable, Jira, Email (Resend), generic Webhooks
 - **Status reports** — `fastrack report` pulls activity from your tools and delivers a formatted report anywhere
 - **Meeting notes → workflows** — `fastrack note` digests notes into decisions and action items, then builds workflows from them
 - **Schedules** — "every morning at 9am" becomes a real cron job
@@ -55,9 +55,9 @@ fastrack "what are the recent commits in my repo?"
 | Command | What it does |
 | --- | --- |
 | `fastrack init` | Interactive setup (model + tools) |
-| `fastrack connect <tool>` | Connect `github`, `notion`, `slack`, `discord`, `telegram`, `linear`, `airtable`, `jira`, or `webhook` |
+| `fastrack connect <tool>` | Connect `github`, `notion`, `slack`, `discord`, `telegram`, `linear`, `airtable`, `jira`, `email`, or `webhook` |
 | `fastrack "..."` | Any plain English command |
-| `fastrack report` | Status report from your tools (`--scope "GTM"`, `--send slack,discord,notion`) |
+| `fastrack report` | Status report from your tools (`--scope "GTM"`, `--send slack,email,notion`, `--to you@x.com`) |
 | `fastrack note` | Digest meeting notes (`fastrack note "..."`, `--file notes.md`, or pipe stdin; `--yes` to auto-create workflows) |
 | `fastrack workflows list` | Table of all saved workflows |
 | `fastrack workflows run <id\|name>` | Run a saved workflow |
@@ -86,6 +86,17 @@ Custom provider? Any OpenAI-compatible endpoint works:
 ```bash
 fastrack model add   # pick "custom", paste base URL + key + model name
 ```
+
+**No model account at all?** Use the managed relay (deployed on Vercel by the project owner). It speaks the OpenAI protocol, so it plugs in as a `custom` provider:
+
+```bash
+fastrack model add
+# provider: custom
+# base URL: https://<relay-host>/v1
+# API key:  <relay client token issued by the owner>
+```
+
+The relay holds the real Groq key server-side, so users never need their own provider account. See `relay/README.md` for deployment.
 
 ## How memory works
 
