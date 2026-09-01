@@ -6,7 +6,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
-import { initDB, wipeDatabase, getAllContext, getWorkflows } from '../core/memory.js';
+import { initDB, wipeDatabase, getAllContext, getWorkflows, deleteWorkflow } from '../core/memory.js';
 import {
   addModel,
   setActiveModel,
@@ -315,6 +315,35 @@ program
           }
         } catch (err) {
           spinner.fail('Run failed');
+          fail(err);
+        }
+      })
+  )
+  .addCommand(
+    new Command('delete')
+      .description('Delete a workflow by ID or name')
+      .argument('<identifier>')
+      .option('-y, --yes', 'Skip confirmation')
+      .action(async (identifier, options) => {
+        try {
+          const workflow = resolveWorkflow(identifier);
+          if (!options.yes) {
+            const { confirm } = await inquirer.prompt([
+              {
+                type: 'confirm',
+                name: 'confirm',
+                message: `Delete workflow #${workflow.id} "${workflow.name}" and its history?`,
+                default: false
+              }
+            ]);
+            if (!confirm) {
+              console.log(chalk.gray('Aborted.'));
+              return;
+            }
+          }
+          deleteWorkflow(workflow.id);
+          console.log(chalk.green(`Deleted workflow #${workflow.id}: ${workflow.name}`));
+        } catch (err) {
           fail(err);
         }
       })

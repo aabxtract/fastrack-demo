@@ -61,6 +61,7 @@ fastrack "what are the recent commits in my repo?"
 | `fastrack note` | Digest meeting notes (`fastrack note "..."`, `--file notes.md`, or pipe stdin; `--yes` to auto-create workflows) |
 | `fastrack workflows list` | Table of all saved workflows |
 | `fastrack workflows run <id\|name>` | Run a saved workflow |
+| `fastrack workflows delete <id\|name>` | Delete a saved workflow (and its history) |
 | `fastrack workflows share <id\|name>` | Export a workflow as JSON |
 | `fastrack workflows import <file>` | Import a workflow from JSON |
 | `fastrack model add` | Add another model |
