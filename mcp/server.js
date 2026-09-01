@@ -185,6 +185,14 @@ export function createServer() {
           case 'webhook':
             return jsonResult(await webhookTool.connect(credentials.name, credentials.url));
           case 'email':
+            if (credentials.provider === 'smtp') {
+              return jsonResult(await email.connectSmtp({
+                user: credentials.user,
+                appPassword: credentials.appPassword,
+                from: credentials.from ?? credentials.user,
+                defaultTo: credentials.defaultTo ?? null
+              }));
+            }
             return jsonResult(await email.connect(credentials.apiKey, credentials.fromEmail, credentials.defaultTo ?? null));
           default:
             throw new Error(`Unsupported tool: ${tool}`);

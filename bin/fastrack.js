@@ -145,22 +145,49 @@ const CONNECTORS = {
   },
   email: {
     guide: () => {
-      console.log(chalk.gray('\nEmail sending is powered by Resend (free tier):'));
-      console.log(chalk.gray('  1. Sign up at https://resend.com -> API Keys -> Create API Key'));
-      console.log(chalk.gray('  2. Free tier sender is onboarding@resend.dev (emails only to YOUR own inbox)'));
-      console.log(chalk.gray('  3. To email other people, verify a domain at resend.com/domains\n'));
+      console.log(chalk.gray('\nEmail has two modes:'));
+      console.log(chalk.gray('  Gmail SMTP (recommended): send from YOUR Gmail to anyone. Needs 2FA + an App Password'));
+      console.log(chalk.gray('    (myaccount.google.com -> Security -> 2-Step Verification -> App passwords)'));
+      console.log(chalk.gray('  Resend (API): free tier at resend.com, but onboarding@resend.dev can only email YOUR own inbox\n'));
     },
-    connect: (answers) => emailTool.connect(answers.apiKey, answers.fromEmail, answers.defaultTo ?? null),
-    prompts: [
-      { type: 'password', name: 'apiKey', message: 'Resend API key (re_...):', mask: '*' },
-      {
-        type: 'input',
-        name: 'fromEmail',
-        message: 'From address:',
-        default: 'onboarding@resend.dev'
-      },
-      { type: 'input', name: 'defaultTo', message: 'Default recipient (your email):' }
-    ]
+    connect: (answers) =>
+      answers.mode === 'smtp'
+        ? emailTool.connectSmtp({
+            user: answers.user,
+            appPassword: answers.appPassword,
+            defaultTo: answers.defaultTo ?? null
+          })
+        : emailTool.connect(answers.apiKey, answers.fromEmail, answers.defaultTo ?? null),
+    prompts: async () => {
+      const { mode } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'mode',
+          message: 'Email mode:',
+          choices: [
+            { name: 'Gmail SMTP - send from your Gmail to anyone (needs App Password)', value: 'smtp' },
+            { name: 'Resend - API key, free tier (only emails yourself)', value: 'resend' }
+          ]
+        }
+      ]);
+      if (mode === 'smtp') {
+        return inquirer.prompt([
+          { type: 'input', name: 'user', message: 'Your Gmail address:' },
+          { type: 'password', name: 'appPassword', message: 'Gmail App Password (16 chars):', mask: '*' },
+          { type: 'input', name: 'defaultTo', message: 'Default recipient (your email):' }
+        ]);
+      }
+      return inquirer.prompt([
+        { type: 'password', name: 'apiKey', message: 'Resend API key (re_...):', mask: '*' },
+        {
+          type: 'input',
+          name: 'fromEmail',
+          message: 'From address:',
+          default: 'onboarding@resend.dev'
+        },
+        { type: 'input', name: 'defaultTo', message: 'Default recipient (your email):' }
+      ]);
+    }
   }
 };
 
@@ -215,7 +242,7 @@ async function connectTool(tool) {
     throw new Error(`Unknown tool "${tool}". Available: ${Object.keys(CONNECTORS).join(', ')}`);
   }
   if (spec.guide) spec.guide();
-  const answers = await inquirer.prompt(spec.prompts);
+  const answers = await (typeof spec.prompts === 'function' ? spec.prompts() : inquirer.prompt(spec.prompts));
   const result = await spec.connect(answers);
   console.log(chalk.green(`Connected ${tool}`));
   return result;

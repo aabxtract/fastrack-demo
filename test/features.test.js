@@ -90,6 +90,13 @@ test('new connectors: guards, connect persistence, webhook + discord live', asyn
     assert.equal(emailHit?.body?.text, 'Test body');
     assert.ok(emailHit, 'email payload arrived');
 
+    // smtp mode: persistence + config shape (no live send — needs a real inbox)
+    await email.connectSmtp({ user: 'demo@gmail.com', appPassword: 'apppassword16', defaultTo: 'me@test.dev' });
+    assert.equal(connected().email.provider, 'smtp');
+    assert.equal(connected().email.host, 'smtp.gmail.com');
+    assert.equal(connected().email.fromEmail, 'demo@gmail.com');
+    await email.connect('re_test', 'onboarding@resend.dev', 'me@test.dev', capture.url); // restore resend for later tests
+
     // unknown named webhook gives a helpful error
     await assert.rejects(() => webhook.send('missing', {}), /not connected.*\(saved:/s);
   } finally {
