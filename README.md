@@ -93,8 +93,9 @@ fastrack model add   # pick "custom", paste base URL + key + model name
 ```bash
 fastrack model add
 # provider: custom
-# base URL: https://<relay-host>/v1
-# API key:  <relay client token issued by the owner>
+# base URL: https://fastrack-relay.vercel.app/v1
+# API key:  <client token issued by the owner>
+# model:    openai/gpt-oss-120b
 ```
 
 The relay holds the real Groq key server-side, so users never need their own provider account. See `relay/README.md` for deployment.
